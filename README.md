@@ -1,6 +1,6 @@
 # Cobertura action
 
-![](https://github.com/5monkeys/cobertura-action/workflows/Test/badge.svg)
+Forked so that we can make this do the test coverage we want it to do.
 
 GitHub Action which parse a [XML cobertura report](http://cobertura.github.io/cobertura/) and display the metrics in a GitHub Pull Request.
 
