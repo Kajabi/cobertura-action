@@ -69,9 +69,8 @@ async function action(payload) {
     reportName,
   });
 
-  const belowThreshold = reports.some(
-    (report) => Math.floor(report.total) < minimumCoverage
-  );
+  // if any one file is in violation, we'll mark it here
+  const belowThreshold = comment.includes(":x:");
 
   if (pullRequestNumber) {
     await addComment(pullRequestNumber, comment, reportName);
