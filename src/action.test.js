@@ -390,7 +390,54 @@ test("action failing on coverage below threshold", async () => {
   );
 });
 
-test("action not failing on coverage above threshold", async () => {
+test("action not failing when every file is above threshold", async () => {
+  const { action } = require("./action");
+  const prNumber = 123;
+  process.env["INPUT_PATH"] = "./src/fixtures/test-branch.xml";
+  process.env["INPUT_SKIP_COVERED"] = "true";
+  process.env["INPUT_SHOW_BRANCH"] = "false";
+  process.env["INPUT_SHOW_LINE"] = "false";
+  process.env["INPUT_MINIMUM_COVERAGE"] = "69";
+  process.env["INPUT_FAIL_BELOW_THRESHOLD"] = "true";
+  process.env["INPUT_SHOW_CLASS_NAMES"] = "false";
+  process.env["INPUT_SHOW_MISSING"] = "false";
+  process.env["INPUT_ONLY_CHANGED_FILES"] = "false";
+  process.env["INPUT_PULL_REQUEST_NUMBER"] = prNumber;
+  apiMock
+    .intercept({
+      method: "POST",
+      path: `/repos/${owner}/${repo}/issues/${prNumber}/comments`,
+    })
+    .reply(200);
+  apiMock
+    .intercept({
+      method: "GET",
+      path: `/repos/${owner}/${repo}/issues/${prNumber}/comments`,
+    })
+    .reply(200, [{ body: "some body", id: 123 }], {
+      headers: { "content-type": "application/json" },
+    });
+  apiMock
+    .intercept({
+      method: "GET",
+      path: `/repos/${owner}/${repo}/pulls/${prNumber}`,
+    })
+    .reply(
+      200,
+      { head: { sha: "deadbeef" } },
+      { headers: { "content-type": "application/json" } },
+    );
+  apiMock
+    .intercept({ method: "POST", path: `/repos/${owner}/${repo}/check-runs` })
+    .reply(200);
+  await action({
+    push: { ref: "master" },
+  });
+  expect(process.exitCode).toBe(0);
+  expect(process.stdout.write).toHaveBeenCalledTimes(0);
+});
+
+test("action failing when one file is below threshold even though the total is above it", async () => {
   const { action } = require("./action");
   const prNumber = 123;
   process.env["INPUT_PATH"] = "./src/fixtures/test-branch.xml";
@@ -433,8 +480,10 @@ test("action not failing on coverage above threshold", async () => {
   await action({
     push: { ref: "master" },
   });
-  expect(process.exitCode).toBe(0);
-  expect(process.stdout.write).toHaveBeenCalledTimes(0);
+  expect(process.exitCode).toBe(1);
+  expect(process.stdout.write).toHaveBeenCalledWith(
+    "::error::Minimum coverage requirement was not satisfied\n",
+  );
 });
 
 test("markdownReport", () => {
